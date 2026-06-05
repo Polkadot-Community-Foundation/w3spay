@@ -1,0 +1,266 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// @paritytech
+
+/**
+ * Parser for German fiscal TSE QR codes (BSI TR-03151 / KassenSichV §6 /
+ * DSFinV-K §4.2). Strict, total, allocation-light: returns ParsedTseQr or
+ * throws TseParseError. v1 does not verify signatures; `signature`/`publicKey`
+ * are surfaced raw so the v2 ECDSA (BSI TR-03116) verifier need not re-parse.
+ *
+ * Wire format — twelve semicolon-delimited fields, prefix-anchored on `V0;`:
+ *   V0;<kassen-seriennummer>;<processType>;<processData>;
+ *   <transaktions-nummer>;<signatur-zaehler>;<start-zeit>;<log-time>;
+ *   <sig-alg>;<log-time-format>;<signatur>;<public-key>
+ *
+ * processData for a Kassenbeleg-V1:
+ *   Beleg^<vat19>_<vat7>_<vatExempt>_<vat19part>_<vatreduced>^<paymentSplit>
+ * The five gross totals (one per VAT class) sum to the receipt total in EUR.
+ * <paymentSplit> is `Bar:<eur>` (cash), `Unbar:<eur>` (non-cash), or both
+ * joined by `|`; not asserted on.
+ *
+ * EUR amounts are returned in cents (integer): never float, to avoid drift on
+ * values like `19.99` when the customer signs for the displayed number.
+ */
+
+const TSE_PREFIX = "V0";
+const KASSENBELEG_V1 = "Kassenbeleg-V1";
+const EXPECTED_FIELD_COUNT = 12;
+
+export interface ParsedTseQr {
+  readonly kassenSerial: string;
+  readonly processType: string;
+  readonly amountCents: number;
+  readonly vatBreakdownCents: VatBreakdown;
+  readonly transactionNumber: string;
+  readonly signatureCounter: string;
+  readonly startTime: string;
+  readonly logTime: string;
+  readonly sigAlgorithm: string;
+  readonly logTimeFormat: string;
+  /** ECDSA signature, base64 — unused in v1, parsed for v2 verifier. */
+  readonly signatureBase64: string;
+  /** TSE public key, base64 — unused in v1, parsed for v2 verifier. */
+  readonly publicKeyBase64: string;
+}
+
+export interface VatBreakdown {
+  /** Field 1: VAT 19% (Regelsteuersatz) gross total, cents. */
+  readonly vat19Cents: number;
+  /** Field 2: VAT 7% (ermäßigt) gross total, cents. */
+  readonly vat7Cents: number;
+  /** Field 3: VAT exempt (umsatzsteuerfrei) gross total, cents. */
+  readonly vatExemptCents: number;
+  /** Field 4: VAT 19% Teilbetrag (deprecated, legacy 10.7% Durchschnittssatz); usually zero. */
+  readonly vat19PartCents: number;
+  /** Field 5: VAT 5.5% Durchschnittssatz (deprecated, Land-/Forstwirtschaft); usually zero. */
+  readonly vatReducedCents: number;
+}
+
+export class TseParseError extends Error {
+  constructor(
+    public readonly code: TseParseErrorCode,
+    message: string,
+  ) {
+    super(message);
+    this.name = "TseParseError";
+  }
+}
+
+export type TseParseErrorCode =
+  | "wrongPrefix"
+  | "wrongFieldCount"
+  | "unsupportedProcessType"
+  | "malformedProcessData"
+  | "malformedAmount"
+  | "nonPositiveAmount";
+
+export function parseTseQr(raw: string): ParsedTseQr {
+  const fields = raw.split(";");
+  if (fields.length !== EXPECTED_FIELD_COUNT) {
+    throw new TseParseError(
+      "wrongFieldCount",
+      `expected ${EXPECTED_FIELD_COUNT} semicolon-delimited fields, got ${fields.length}`,
+    );
+  }
+  if (fields[0] !== TSE_PREFIX) {
+    throw new TseParseError(
+      "wrongPrefix",
+      `expected prefix "${TSE_PREFIX}" as first field, got "${fields[0]}"`,
+    );
+  }
+  const [
+    ,
+    kassenSerial,
+    processType,
+    processData,
+    transactionNumber,
+    signatureCounter,
+    startTime,
+    logTime,
+    sigAlgorithm,
+    logTimeFormat,
+    signatureBase64,
+    publicKeyBase64,
+  ] = fields;
+  // Length check pins fields.length === EXPECTED_FIELD_COUNT; narrow for noUncheckedIndexedAccess.
+  if (
+    kassenSerial == null ||
+    processType == null ||
+    processData == null ||
+    transactionNumber == null ||
+    signatureCounter == null ||
+    startTime == null ||
+    logTime == null ||
+    sigAlgorithm == null ||
+    logTimeFormat == null ||
+    signatureBase64 == null ||
+    publicKeyBase64 == null
+  ) {
+    throw new TseParseError(
+      "wrongFieldCount",
+      `expected ${EXPECTED_FIELD_COUNT} non-empty fields, got missing field`,
+    );
+  }
+
+  if (processType !== KASSENBELEG_V1) {
+    throw new TseParseError(
+      "unsupportedProcessType",
+      `unsupported processType "${processType}" — only "${KASSENBELEG_V1}" is accepted`,
+    );
+  }
+
+  const breakdown = parseProcessDataVatTotals(processData);
+  const amountCents =
+    breakdown.vat19Cents +
+    breakdown.vat7Cents +
+    breakdown.vatExemptCents +
+    breakdown.vat19PartCents +
+    breakdown.vatReducedCents;
+  if (amountCents <= 0) {
+    throw new TseParseError(
+      "nonPositiveAmount",
+      `receipt total must be positive, got ${amountCents} cents`,
+    );
+  }
+
+  return {
+    kassenSerial,
+    processType,
+    amountCents,
+    vatBreakdownCents: breakdown,
+    transactionNumber,
+    signatureCounter,
+    startTime,
+    logTime,
+    sigAlgorithm,
+    logTimeFormat,
+    signatureBase64,
+    publicKeyBase64,
+  };
+}
+
+/**
+ * Parse Kassenbeleg-V1 processData into VAT-class totals (cents):
+ *   Beleg^<vat19>_<vat7>_<vatExempt>_<vat19part>_<vatreduced>^<paymentSplit>
+ * Three `^`-sections (token "Beleg", VAT totals, payment split); five `_`-
+ * delimited totals are `.`-separator EUR decimals (BSI TR-03151 §B.6.2).
+ * Throws TseParseError("malformedProcessData") on any structural deviation.
+ */
+function parseProcessDataVatTotals(processData: string): VatBreakdown {
+  const sections = processData.split("^");
+  if (sections.length < 2 || sections[0] !== "Beleg") {
+    throw new TseParseError(
+      "malformedProcessData",
+      `processData must start with "Beleg^…", got "${processData}"`,
+    );
+  }
+  const totalsRaw = sections[1] ?? "";
+  const totals = totalsRaw.split("_");
+  if (totals.length !== 5) {
+    throw new TseParseError(
+      "malformedProcessData",
+      `expected 5 VAT-class totals separated by "_", got ${totals.length} in "${totalsRaw}"`,
+    );
+  }
+  const [vat19, vat7, vatExempt, vat19Part, vatReduced] = totals;
+  if (
+    vat19 == null ||
+    vat7 == null ||
+    vatExempt == null ||
+    vat19Part == null ||
+    vatReduced == null
+  ) {
+    throw new TseParseError(
+      "malformedProcessData",
+      `expected 5 VAT-class totals, got missing field in "${totalsRaw}"`,
+    );
+  }
+  return {
+    vat19Cents: parseEurDecimalToCents(vat19),
+    vat7Cents: parseEurDecimalToCents(vat7),
+    vatExemptCents: parseEurDecimalToCents(vatExempt),
+    vat19PartCents: parseEurDecimalToCents(vat19Part),
+    vatReducedCents: parseEurDecimalToCents(vatReduced),
+  };
+}
+
+/**
+ * Parse a TSE EUR decimal (e.g. `"2.55"`) into integer cents. Format pins `.`
+ * as separator and ≤2 fractional digits — no thousands separator, no `,` locale.
+ */
+function parseEurDecimalToCents(raw: string): number {
+  if (raw.length === 0) {
+    throw new TseParseError("malformedAmount", "empty amount field");
+  }
+  let cursor = 0;
+  let sign = 1;
+  if (raw[0] === "-") {
+    sign = -1;
+    cursor = 1;
+  } else if (raw[0] === "+") {
+    cursor = 1;
+  }
+  let euros = 0;
+  let sawDigit = false;
+  while (cursor < raw.length && raw[cursor] !== ".") {
+    const digit = raw.charCodeAt(cursor) - 0x30;
+    if (digit < 0 || digit > 9) {
+      throw new TseParseError(
+        "malformedAmount",
+        `non-digit character "${raw[cursor]}" in integer part of "${raw}"`,
+      );
+    }
+    euros = euros * 10 + digit;
+    sawDigit = true;
+    cursor += 1;
+  }
+  let cents = 0;
+  if (cursor < raw.length) {
+    cursor += 1;
+    let consumed = 0;
+    while (cursor < raw.length && consumed < 2) {
+      const digit = raw.charCodeAt(cursor) - 0x30;
+      if (digit < 0 || digit > 9) {
+        throw new TseParseError(
+          "malformedAmount",
+          `non-digit character "${raw[cursor]}" in fractional part of "${raw}"`,
+        );
+      }
+      cents = cents * 10 + digit;
+      consumed += 1;
+      cursor += 1;
+      sawDigit = true;
+    }
+    if (consumed === 1) cents *= 10; // "1.5" => 150 cents
+    if (cursor < raw.length) {
+      throw new TseParseError(
+        "malformedAmount",
+        `unexpected extra digits past two decimals in "${raw}"`,
+      );
+    }
+  }
+  if (!sawDigit) {
+    throw new TseParseError("malformedAmount", `no digits in amount "${raw}"`);
+  }
+  return sign * (euros * 100 + cents);
+}

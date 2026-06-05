@@ -1,42 +1,54 @@
 # W3SPay
 
-Outside-venue Coinage receipt scanner for Web3 Summit Berlin (18–19 June 2026).
+> [!WARNING]
+> The following is a prototype, reference implementation, and proof-of-concept. This open source code is provided for research, experimentation, and developer education only. This code has not been audited, is actively experimental, and may contain bugs, vulnerabilities, or incomplete features. Use at your own risk.
 
-A Triangle (Polkadot host) sandboxed SPA. Scans a German fiscal TSE QR code
-(BSI TR-03151 / KassenSichV §6) from any merchant's printed receipt, extracts
-`(kassenSerial, amountEur)`, looks up the merchant's smart-contract destination
-in a hardcoded table, and issues an RFC 6 Coinage payment via the host
-`coinPayment.paymentRequest` capability. Shows a confirmation screen the
-customer hands to the cashier.
+This is code developed and published by Parity as an experimental proof-of-concept. It is **not** a Parity product or service, and Parity does not operate, host, deploy, or endorse any downstream deployment of it — downstream operators run their own forks at their own discretion.
 
-Forked from `repos/t3rminal/apps/merchant-terminal/`. Same Vite +
-`product-sdk-pack` + `bulletin-deploy → .dot` shell; new UI + parser layer.
+Mobile-first customer checkout for the W3sPay payment surface. The app scans merchant receipt and terminal-payment codes, resolves pilot merchants from the on-chain registry, asks the Polkadot host to execute CASH payments, and keeps a local wallet-style activity and receipt history.
 
-## Develop
 
-```sh
+## Getting Started
+
+### Deploy
+
+```bash
 npm install
-npm run dev
+cp .env.example .env.local        # set VITE_DOTNS_PRODUCT_DOMAIN and confirm VITE_* values
+npm run deploy                    # builds and publishes the configured .dot product
 ```
 
-## Test
+`deploy.sh` requires a deployment mnemonic from `MNEMONIC` or `DOTNS_MNEMONIC`, and it requires `VITE_NETWORK` to match `BULLETIN_ENV`.
 
-```sh
+### Frontend (local dev)
+
+```bash
+npm install
+cp .env.example .env.local        # then set VITE_DOTNS_PRODUCT_DOMAIN and VITE_* values
+npm run dev                       # http://localhost:5174
+```
+
+
+### Checks
+
+```bash
 npm test
-```
-
-## Build
-
-```sh
+npm run typecheck
 npm run build
 ```
 
-## Deploy as `w3spay.dot`
 
-```sh
-export DOTNS_MNEMONIC="your twelve word mnemonic phrase here"
-./deploy.sh
-```
+## Security
 
-See `deploy.sh` for optional overrides.
-# W3SPay
+Before deploying it for real use cases, you are responsible for:
+
+- Reviewing the code yourself; this is a reference proof-of-concept, not a hardened production build.
+- Checking that dependencies are up to date and free of known vulnerabilities.
+- Securing your own fork or deployment environment, especially mnemonics, CI secrets, host product identity, registry address, and DotNS ownership.
+- Tracking the latest tagged release / commits for security fixes; older releases are not backported (exceptions might apply).
+
+For Parity's security disclosure process and Bug Bounty program, see [parity.io/bug-bounty](https://parity.io/bug-bounty).
+
+## License
+
+Licensed under [GPL-3.0-or-later](./LICENSE).
