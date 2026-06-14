@@ -11,17 +11,18 @@
 # Required env:
 #   - MNEMONIC or DOTNS_MNEMONIC
 #   - VITE_DOTNS_PRODUCT_DOMAIN   Product DOTNS identifier to publish (REQUIRED, no default).
-#                             Used for the bulletin-deploy target and rewritten into
-#                             the published manifest `[app] id`. Also passed to the
-#                             build so the SPA knows its own product identity.
+#                             Used for the polkadot-app-deploy target and rewritten
+#                             into the published manifest `[app] id`. Also passed to
+#                             the build so the SPA knows its own product identity.
 #
 # Optional env:
-#   - DOTNS_GATEWAY_BASE      Final gateway host suffix (default: dot.li).
-#   - BULLETIN_ENV            bulletin-deploy --env id (default: paseo-next-v2).
-#                             Coinage lives on Paseo People NEXT, which only
-#                             exists in v2 — do not change unless you know
-#                             both the host network AND the coinage runtime
-#                             are present in the chosen env.
+#   - DOTNS_GATEWAY_BASE      Final gateway host suffix (default: dot.li). On
+#                             summit the gateway is https://summit-ipfs.polkadot.io.
+#   - BULLETIN_ENV            polkadot-app-deploy --env id (default: paseo-next-v2;
+#                             `summit` for the Summit network). VITE_NETWORK must
+#                             match it. Coinage (CASH/pUSD) lives on the people
+#                             chain of the chosen env — paseo-next-v2 and summit
+#                             both have one; do not point at an env that lacks it.
 #   - VITE_NETWORK            App chain key. Defaults to BULLETIN_ENV and MUST
 #                             match it for deployment.
 #
@@ -41,52 +42,22 @@ BULLETIN_DEPLOY_PUBLISH="${BULLETIN_DEPLOY_PUBLISH:-}"
 # helper definition. Splitting them avoids calling the helper before it's
 # been declared.
 TARGET="${1:-${VITE_DOTNS_PRODUCT_DOMAIN:-}}"
-MIN_BULLETIN_DEPLOY_VERSION="0.10.0"
 
 # .dot suffix is appended after the Phase 2 .env fallback, below.
 
-version_gte() {
-  local current="$1"
-  local minimum="$2"
-  local current_major current_minor current_patch
-  local minimum_major minimum_minor minimum_patch
-
-  IFS=. read -r current_major current_minor current_patch <<<"$current"
-  IFS=. read -r minimum_major minimum_minor minimum_patch <<<"$minimum"
-
-  [[ "$current_major" =~ ^[0-9]+$ ]] || return 1
-  [[ "$current_minor" =~ ^[0-9]+$ ]] || return 1
-  [[ "$current_patch" =~ ^[0-9]+$ ]] || return 1
-
-  if (( current_major != minimum_major )); then
-    (( current_major > minimum_major ))
-    return
-  fi
-  if (( current_minor != minimum_minor )); then
-    (( current_minor > minimum_minor ))
-    return
-  fi
-  (( current_patch >= minimum_patch ))
-}
-
-if ! command -v bulletin-deploy >/dev/null 2>&1; then
-  echo "Error: bulletin-deploy is required for current DotNS deployments."
-  echo ""
-  echo "Install it first:"
-  echo "  npm install -g bulletin-deploy@latest"
-  exit 1
-fi
-
-BULLETIN_DEPLOY_VERSION="$(bulletin-deploy --version | sed -E 's/.*v?([0-9]+[.][0-9]+[.][0-9]+).*/\1/')"
-if ! version_gte "$BULLETIN_DEPLOY_VERSION" "$MIN_BULLETIN_DEPLOY_VERSION"; then
-  echo "Error: bulletin-deploy ${MIN_BULLETIN_DEPLOY_VERSION} or newer is required for Paseo deployments."
-  echo "Found: ${BULLETIN_DEPLOY_VERSION:-unknown}"
-  echo ""
-  echo "Update it first:"
-  echo "  npm install -g bulletin-deploy@latest"
-  echo ""
-  echo "Versions before 0.7.12 do not support the current Bulletin authorization logic."
-  exit 1
+# Resolve the deploy CLI. Prefer a globally-installed `polkadot-app-deploy`
+# (CI installs it once); otherwise fall back to npx with the version pinned.
+# The scoped PCF package ships the BUILT-IN `summit` env (all Summit RPCs +
+# DotNS addresses + the `https://summit-ipfs.polkadot.io` gateway) and the
+# manifest direct-signer fix. The legacy unscoped `bulletin-deploy` is NOT
+# used: its repo is gone and it lacks the manifest fix.
+PAD_PKG="@polkadot-community-foundation/polkadot-app-deploy@0.10.1"
+if command -v polkadot-app-deploy >/dev/null 2>&1; then
+  PAD=(polkadot-app-deploy)
+elif command -v pad >/dev/null 2>&1; then
+  PAD=(pad)
+else
+  PAD=(npx -y "$PAD_PKG")
 fi
 
 # Resolve the deploying mnemonic. Sources in priority order:
@@ -222,10 +193,10 @@ export VITE_DOTNS_PRODUCT_DOMAIN="$TARGET"
 
 
 case "$VITE_NETWORK" in
-  paseo|paseo-next-v2|previewnet) ;;
+  paseo|paseo-next-v2|previewnet|summit) ;;
   *)
     echo "Error: VITE_NETWORK=\"$VITE_NETWORK\" is not supported."
-    echo "Expected one of: paseo, paseo-next-v2, previewnet."
+    echo "Expected one of: paseo, paseo-next-v2, previewnet, summit."
     exit 1
     ;;
 esac
@@ -256,13 +227,36 @@ awk -v id="$TARGET" '
 ' "$BUILD_DIR/manifest.toml" > "$BUILD_DIR/manifest.toml.tmp" \
   && mv "$BUILD_DIR/manifest.toml.tmp" "$BUILD_DIR/manifest.toml"
 
-echo ""
-echo "==> Deploying ${TARGET} to Paseo Next v2 (BULLETIN_ENV=${BULLETIN_ENV})..."
+# Resolve the --publish flag. The Publisher (Browse directory) registry only
+# exists on paseo-next-v2 — Summit has no Publisher, so --publish is a non-op
+# there (a non-fatal skip). Never pass it on summit.
+PUBLISH_FLAG=()
 if [[ "$BULLETIN_DEPLOY_PUBLISH" == "true" ]]; then
-  bulletin-deploy --publish --env "$BULLETIN_ENV" --mnemonic "$RAW_MNEMONIC" "$BUILD_DIR" "$TARGET"
-else
-  bulletin-deploy --env "$BULLETIN_ENV" --mnemonic "$RAW_MNEMONIC" "$BUILD_DIR" "$TARGET"
+  if [[ "$BULLETIN_ENV" == "summit" ]]; then
+    echo "==> Note: --publish requested but ignored on summit (no Publisher registry)."
+  else
+    PUBLISH_FLAG=(--publish)
+  fi
 fi
+
+echo ""
+echo "==> Deploying ${TARGET} via ${PAD[*]} (BULLETIN_ENV=${BULLETIN_ENV})..."
+# --config        : product manifest is auto-discovered by filename, but pass it
+#                   explicitly so a future build-dir change can't silently drop it.
+# --mnemonic      : routes Bulletin storage signing to DIRECT mode (the signer is
+#                   both DotNS owner and upload signer). Without it, uploads ride
+#                   the default public pool — unauthorized on Summit.
+# --js-merkle     : pure-JS merkleization; skips the Kubo download.
+# --no-transfer-to-signedin-user : don't hand a fresh registration to a stale
+#                   signed-in identity on the runner/VM.
+"${PAD[@]}" \
+  "${PUBLISH_FLAG[@]}" \
+  --env "$BULLETIN_ENV" \
+  --mnemonic "$RAW_MNEMONIC" \
+  --config "$SCRIPT_DIR/polkadot-app-deploy.config.ts" \
+  --js-merkle \
+  --no-transfer-to-signedin-user \
+  "$BUILD_DIR" "$TARGET"
 
 NAME="${TARGET%.dot}"
 echo ""

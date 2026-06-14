@@ -2,8 +2,8 @@
 // @paritytech
 
 /**
- * On-chain merchant directory reader. The W3SPay registry on Paseo Asset
- * Hub is the single source of truth for
+ * On-chain merchant directory reader. The W3SPay registry on the active
+ * network's Asset Hub is the single source of truth for
  * `(merchantId, terminalId) → (destination, displayName)`; this enumerates
  * the terminal keys, decodes each `MerchantEntry`, and returns rows for
  * `load-merchants.ts` to project.
@@ -58,7 +58,7 @@ export interface ChainOverlay {
 export interface LoadOnChainOptions {
   /** Deployed registry contract address (H160, 0x-prefixed). */
   registryAddress: string;
-  /** Paseo Asset Hub PAPI client (or a structurally-compatible mock). */
+  /** Asset Hub PAPI client (or a structurally-compatible mock). */
   client: PolkadotClient;
   /**
    * SS58 dry-run origin. Must be mapped in pallet-revive; unmapped accounts
