@@ -9,9 +9,9 @@
  * `sandboxTransport.isReady()` handshake; wrapped in a 30s timeout so a
  * never-responding webview port surfaces an error instead of hanging) →
  * `getProductAccountSigner(account, "createTransaction")` (host-side tx
- * encoding so chains with custom signed extensions — `AsPgas` on Paseo Asset
- * Hub Next — verify; the legacy `host_sign_payload` slot can't and the runtime
- * rejects with `BadProof`) → `ready`.
+ * encoding so chains with custom signed extensions — `AsPgas` on Asset-Hub
+ * Next runtimes — verify; the legacy `host_sign_payload` slot can't and the
+ * runtime rejects with `BadProof`) → `ready`.
  *
  * Outside a host: resolves to `outside-host` immediately. Failures patch the
  * store to `{ kind: "error", reason, phase? }`; `retryHostWallet()` re-runs.

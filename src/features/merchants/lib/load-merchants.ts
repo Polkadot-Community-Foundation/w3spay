@@ -5,7 +5,7 @@
  * Merchant table loader. The on-chain registry is the single source of
  * truth; merchant identity arrives via the t3rminal deeplink
  * (`merchantId, terminalId`), destination + displayName from
- * `W3SPayRegistry` on Paseo Asset Hub.
+ * `W3SPayRegistry` on the active network's Asset Hub.
  *
  * Boot resolution order: chain (read rows, cache snapshot) → cache (last
  * chain snapshot) → empty (every lookup is `unknownMerchant`). The registry
@@ -37,9 +37,6 @@ export const MERCHANT_CACHE_KEY = "w3spay:merchants-onchain:cached:v3";
 /** Wall-clock timeout for the on-chain read before we fall back. */
 export const DEFAULT_CHAIN_TIMEOUT_MS = 3_000;
 
-/** Pinned chain ID — Paseo Asset Hub Testnet. Surfaced for diagnostics without re-deriving via PAPI. */
-export const PASEO_ASSET_HUB_CHAIN_ID = 420420417;
-
 /**
  * Build the `MerchantTable` lookup key. Lives by the loader so every
  * caller — boot, scan, refresh — agrees on the same key shape.
@@ -64,7 +61,7 @@ export interface LoadMerchantsOptions {
    * skips the chain step. From `VITE_W3SPAY_REGISTRY_ADDRESS` in prod.
    */
   registryAddress?: string | null;
-  /** Paseo Asset Hub PAPI client (or a structurally-compatible mock). */
+  /** Asset Hub PAPI client (or a structurally-compatible mock). */
   client?: PolkadotClient | null;
   /**
    * SS58 dry-run origin for the revive read. Defaults to the mapped

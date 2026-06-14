@@ -37,7 +37,7 @@ export type ClientTransportMode = "auto" | "ws";
  *     standalone opens direct WS (createPapiProvider can't be called there).
  *   - `"ws"`: ALWAYS direct WS, even in host. For chains where the host
  *     advertises support but does not establish a working chainHead follow
- *     — on Paseo Asset Hub Next that makes `signSubmitAndWatch` broadcast
+ *     — on an Asset Hub Next runtime that makes `signSubmitAndWatch` broadcast
  *     (the tx lands) yet never emit `txBestBlocksState`, so the write hangs
  *     at "broadcasting". Signing still goes through the host signer; only
  *     chain RPC bypasses the host. NOTE: a `"ws"` client cannot run inside

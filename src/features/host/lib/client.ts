@@ -43,6 +43,3 @@ export function usePeopleClient() {
 }
 
 export const resetMainClient = resetClientCache;
-
-export const PASEO_ASSET_HUB_WS =
-  resolveNetwork(envConfig.chain.network).mainChain.wsUrl;

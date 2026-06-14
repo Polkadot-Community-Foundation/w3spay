@@ -12,14 +12,30 @@ import { envFlag, envString, requireEnvString } from "@/shared/lib/config";
 import { type EnvConfig, parseSupportedPlatforms } from "@/shared/lib/config.ts";
 
 
-const DEFAULT_W3SPAY_NETWORK: NetworkKey = "paseo-next-v2";
+const DEFAULT_W3SPAY_NETWORK: NetworkKey = "summit";
+
+// Deployed `W3SPayRegistry` per network (published by w3spay-admin). The active
+// default follows the resolved network so an env-unset build never inherits
+// another chain's address (a summit build must NOT bake the paseo registry —
+// that H160 has no contract on Summit AH). Override per deploy via
+// VITE_W3SPAY_REGISTRY_ADDRESS. Networks without a known registry resolve to ""
+// → the loader skips the chain step and falls back to the cached snapshot.
+const DEFAULT_REGISTRY_BY_NETWORK: Partial<Record<NetworkKey, string>> = {
+  summit: "0xf76dadbbc112738275ed398d15c0e8c47b2550f2",
+  "paseo-next-v2": "0x70f6a449d770931419cfa8d8412e3a5d6377e905",
+};
 
 export function readEnv(): EnvConfig {
   const decimals = 6;
   const displayDecimals = 2;
+  const network =
+    parseNetworkKey(import.meta.env.VITE_NETWORK as string | undefined) ?? DEFAULT_W3SPAY_NETWORK;
   return {
     contracts: {
-      merchantRegistryAddress: envString("VITE_W3SPAY_REGISTRY_ADDRESS", "0x70f6a449d770931419cfa8d8412e3a5d6377e905"),
+      merchantRegistryAddress: envString(
+        "VITE_W3SPAY_REGISTRY_ADDRESS",
+        DEFAULT_REGISTRY_BY_NETWORK[network] ?? "",
+      ),
     },
     merchant: {
       pilotId: envString("VITE_W3SPAY_PILOT_MERCHANT_ID", "funkhaus"),
@@ -27,8 +43,7 @@ export function readEnv(): EnvConfig {
       registryRetryIntervalMs: 5_000,
     },
     chain: {
-      network:
-        parseNetworkKey(import.meta.env.VITE_NETWORK as string | undefined) ?? DEFAULT_W3SPAY_NETWORK,
+      network,
       readOnlyOrigin: "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
     },
     token: {
