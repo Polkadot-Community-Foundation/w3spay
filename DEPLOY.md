@@ -39,7 +39,7 @@ owns the target `.dot`; it signs both the Bulletin upload and the DotNS bind.
 ## Prerequisites
 
 - Node ≥ 22
-- The deploy CLI `@polkadot-community-foundation/polkadot-app-deploy@0.10.1` —
+- The deploy CLI `@polkadot-community-foundation/polkadot-app-deploy@0.11.0` —
   installed globally by CI, otherwise fetched on demand by `deploy.sh` via
   `npx` (no repo dependency).
 
