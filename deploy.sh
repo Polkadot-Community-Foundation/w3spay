@@ -51,7 +51,7 @@ TARGET="${1:-${VITE_DOTNS_PRODUCT_DOMAIN:-}}"
 # DotNS addresses + the `https://summit-ipfs.polkadot.io` gateway) and the
 # manifest direct-signer fix. The legacy unscoped `bulletin-deploy` is NOT
 # used: its repo is gone and it lacks the manifest fix.
-PAD_PKG="@polkadot-community-foundation/polkadot-app-deploy@0.10.1"
+PAD_PKG="@polkadot-community-foundation/polkadot-app-deploy@0.11.0"
 if command -v polkadot-app-deploy >/dev/null 2>&1; then
   PAD=(polkadot-app-deploy)
 elif command -v pad >/dev/null 2>&1; then

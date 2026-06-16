@@ -6,7 +6,7 @@ name: Deploy Frontend
 # cost a DotNS registration (~2 SUM) + a 14-day Bulletin upload. PR validation is
 # unit tests (see e2e.yml).
 #
-# Deploy CLI: @polkadot-community-foundation/polkadot-app-deploy@0.10.1 — it ships
+# Deploy CLI: @polkadot-community-foundation/polkadot-app-deploy@0.11.0 — it ships
 # the built-in `summit` env. deploy.sh passes --mnemonic (direct signer),
 # --config, --js-merkle and --no-transfer-to-signedin-user.
 
@@ -42,7 +42,7 @@ jobs:
           npm install --no-audit --no-fund
 
       - name: Install deploy tool
-        run: npm install -g @polkadot-community-foundation/polkadot-app-deploy@0.10.1
+        run: npm install -g @polkadot-community-foundation/polkadot-app-deploy@0.11.0
 
       - name: Deploy customer app to Summit
         uses: nick-fields/retry@v3
