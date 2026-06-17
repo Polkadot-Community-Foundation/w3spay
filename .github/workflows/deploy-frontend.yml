@@ -52,10 +52,15 @@ jobs:
           timeout_minutes: 15
           max_attempts: 3
           retry_wait_seconds: 30
-          command: ./deploy.sh "w3spaycheckout.dot"
+          command: ./deploy.sh "w3spay.dot"
         env:
-          # The Bulletin-authorized Summit uploader (5Fk8) that owns
-          # w3spaycheckout.dot — signs both the Bulletin upload and the DotNS bind.
+          # The Bulletin-authorized Summit uploader (5Fk8) that owns w3spay.dot
+          # — signs both the Bulletin upload and the DotNS bind. The domain is
+          # baked into the build as the product identity (the deeplink), so it
+          # MUST be w3spay.dot (was w3spaycheckout.dot, which broke the deeplink).
+          # NOTE: w3spay.dot is a 6-char PoP-gated name — it must be pre-registered
+          # to 5Fk8 via the registerReserved owner-override before this runs,
+          # otherwise the DotNS bind fails.
           MNEMONIC: ${{ secrets.DOTNS_MNEMONIC }}
           BULLETIN_ENV: summit
           VITE_NETWORK: summit
