@@ -51,7 +51,7 @@ TARGET="${1:-${VITE_DOTNS_PRODUCT_DOMAIN:-}}"
 # DotNS addresses + the `https://summit-ipfs.polkadot.io` gateway) and the
 # manifest direct-signer fix. The legacy unscoped `bulletin-deploy` is NOT
 # used: its repo is gone and it lacks the manifest fix.
-PAD_PKG="@polkadot-community-foundation/polkadot-app-deploy@0.11.0"
+PAD_PKG="@polkadot-community-foundation/polkadot-app-deploy@0.11.1"
 if command -v polkadot-app-deploy >/dev/null 2>&1; then
   PAD=(polkadot-app-deploy)
 elif command -v pad >/dev/null 2>&1; then
@@ -227,16 +227,15 @@ awk -v id="$TARGET" '
 ' "$BUILD_DIR/manifest.toml" > "$BUILD_DIR/manifest.toml.tmp" \
   && mv "$BUILD_DIR/manifest.toml.tmp" "$BUILD_DIR/manifest.toml"
 
-# Resolve the --publish flag. The Publisher (Browse directory) registry only
-# exists on paseo-next-v2 — Summit has no Publisher, so --publish is a non-op
-# there (a non-fatal skip). Never pass it on summit.
+# Resolve the --publish flag. Passing --publish lists the app in the browse
+# app-directory by calling on-chain Publisher.publish(label). Summit's Publisher
+# (0xf5fe0fc9f4c13dfd3a4a8abd27e64eb652157494) is wired into the deploy CLI as of
+# v0.11.1 — earlier versions silently no-op'd --publish on summit. The deploy
+# signer (5Fk8) owns the Publisher, so it publishes any .dot it owns with no
+# personhood gate and no rate limit.
 PUBLISH_FLAG=()
 if [[ "$BULLETIN_DEPLOY_PUBLISH" == "true" ]]; then
-  if [[ "$BULLETIN_ENV" == "summit" ]]; then
-    echo "==> Note: --publish requested but ignored on summit (no Publisher registry)."
-  else
-    PUBLISH_FLAG=(--publish)
-  fi
+  PUBLISH_FLAG=(--publish)
 fi
 
 echo ""

@@ -6,9 +6,11 @@ name: Deploy Frontend
 # cost a DotNS registration (~2 SUM) + a 14-day Bulletin upload. PR validation is
 # unit tests (see e2e.yml).
 #
-# Deploy CLI: @polkadot-community-foundation/polkadot-app-deploy@0.11.0 — it ships
-# the built-in `summit` env. deploy.sh passes --mnemonic (direct signer),
-# --config, --js-merkle and --no-transfer-to-signedin-user.
+# Deploy CLI: @polkadot-community-foundation/polkadot-app-deploy@0.11.1 — it ships
+# the built-in `summit` env AND wires Summit's Publisher, so --publish lists the
+# app in the browse directory (no-op before v0.11.1). deploy.sh passes --publish
+# (BULLETIN_DEPLOY_PUBLISH=true), --mnemonic (direct signer), --config, --js-merkle
+# and --no-transfer-to-signedin-user.
 
 on:
   push:
@@ -42,7 +44,7 @@ jobs:
           npm install --no-audit --no-fund
 
       - name: Install deploy tool
-        run: npm install -g @polkadot-community-foundation/polkadot-app-deploy@0.11.0
+        run: npm install -g @polkadot-community-foundation/polkadot-app-deploy@0.11.1
 
       - name: Deploy customer app to Summit
         uses: nick-fields/retry@v3
@@ -57,6 +59,11 @@ jobs:
           MNEMONIC: ${{ secrets.DOTNS_MNEMONIC }}
           BULLETIN_ENV: summit
           VITE_NETWORK: summit
+          # List the checkout SPA in the browse app-directory: deploy.sh passes
+          # --publish, which calls on-chain Publisher.publish() on Summit. The
+          # deploy signer (5Fk8) owns the Publisher, so this is gateless. Requires
+          # the CLI at >=0.11.1 (pinned above), which wires Summit's Publisher.
+          BULLETIN_DEPLOY_PUBLISH: 'true'
           # Summit W3SPayRegistry (from w3spay-admin). Override via the repo var
           # after a registry redeploy; otherwise this known-good default is baked
           # (src/config.ts carries the same summit default).
