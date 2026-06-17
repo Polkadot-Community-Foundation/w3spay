@@ -47,7 +47,7 @@ export function readEnv(): EnvConfig {
       readOnlyOrigin: "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
     },
     token: {
-      symbol: "CASH",
+      symbol: "CASH TOKEN",
       plancksPerCent: 10 ** (decimals - displayDecimals),
     },
     payment: {
