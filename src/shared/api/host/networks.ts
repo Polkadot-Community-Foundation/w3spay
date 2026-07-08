@@ -11,11 +11,12 @@
  * `chain_getBlockHash` with params `[0]` over JSON-RPC.
  */
 
-export type NetworkKey = "paseo" | "paseo-next-v2" | "previewnet" | "summit";
+export type NetworkKey = "paseo" | "paseo-next-v2" | "paseo-next" | "previewnet" | "summit";
 
 export const SUPPORTED_NETWORKS: NetworkKey[] = [
   "paseo",
   "paseo-next-v2",
+  "paseo-next",
   "previewnet",
   "summit",
 ];
@@ -86,6 +87,33 @@ export const NETWORKS: Record<NetworkKey, NetworkConfig> = {
   "paseo-next-v2": {
     key: "paseo-next-v2",
     displayName: "Paseo Next V2",
+    isTestnet: true,
+    // Endpoints + genesis hashes mirror polkadot-desktop's environment
+    // registry, so there's no need for the empty-hash + sync-network dance.
+    mainChain: {
+      wsUrl: "wss://paseo-asset-hub-next-rpc.polkadot.io",
+      genesisHash:
+        "0xbf0488dbe9daa1de1c08c5f743e26fdc2a4ecd74cf87dd1b4b1eeb99ae4ef19f",
+    },
+    bulletinChain: {
+      wsUrl: "wss://paseo-bulletin-next-rpc.polkadot.io",
+      genesisHash:
+        "0x8cfe6717dc4becfda2e13c488a1e2061ff2dfee96e7d031157f72d36716c0a22",
+    },
+    // Paseo People Next — hosts the CASH TOKEN (pUSD) foreign asset queried by the
+    // admin Balances tab. Genesis verified live (chain_getBlockHash(0)).
+    peopleChain: {
+      wsUrl: "wss://paseo-people-next-system-rpc.polkadot.io",
+      genesisHash:
+        "0xc5af1826b31493f08b7e2a823842f98575b806a784126f28da9608c68665afa5",
+    },
+    ipfsGateway: "https://paseo-bulletin-next-ipfs.polkadot.io",
+    nativeToken: { symbol: "PAS", decimals: 10 },
+  },
+  // PCF-owned suite on the same chains — resolves PCF contracts.
+  "paseo-next": {
+    key: "paseo-next",
+    displayName: "Paseo Next (PCF)",
     isTestnet: true,
     // Endpoints + genesis hashes mirror polkadot-desktop's environment
     // registry, so there's no need for the empty-hash + sync-network dance.
