@@ -46,15 +46,15 @@ jobs:
       - name: Install deploy tool
         run: npm install -g @polkadot-community-foundation/polkadot-app-deploy@0.12.0
 
-      - name: Deploy customer app to Summit
+      - name: Deploy customer app to devnet
         uses: nick-fields/retry@v3
         with:
           timeout_minutes: 15
           max_attempts: 3
           retry_wait_seconds: 30
-          command: ./deploy.sh "w3spay.dot"
+          command: ./deploy.sh "w3spaycheckout.dot"
         env:
-          # The Bulletin-authorized Summit uploader (5Fk8) that owns w3spay.dot
+          # The Bulletin-authorized devnet uploader (5Fk8) that owns w3spaycheckout.dot
           # — signs both the Bulletin upload and the DotNS bind. The domain is
           # baked into the build as the product identity (the deeplink), so it
           # MUST be w3spay.dot (was w3spaycheckout.dot, which broke the deeplink).
@@ -62,16 +62,16 @@ jobs:
           # to 5Fk8 via the registerReserved owner-override before this runs,
           # otherwise the DotNS bind fails.
           MNEMONIC: ${{ secrets.DOTNS_MNEMONIC }}
-          BULLETIN_ENV: paseo-next
-          VITE_NETWORK: paseo-next
+          BULLETIN_ENV: devnet
+          VITE_NETWORK: devnet
           # List the checkout SPA in the browse app-directory: deploy.sh passes
           # --publish, which calls on-chain Publisher.publish() on Summit. The
           # deploy signer (5Fk8) owns the Publisher, so this is gateless. Requires
           # the CLI at >=0.11.1 (pinned above), which wires Summit's Publisher.
           BULLETIN_DEPLOY_PUBLISH: 'true'
-          # Summit W3SPayRegistry (from w3spay-admin). Override via the repo var
-          # after a registry redeploy; otherwise this known-good default is baked
-          # (src/config.ts carries the same summit default).
-          VITE_W3SPAY_REGISTRY_ADDRESS: ${{ vars.VITE_W3SPAY_REGISTRY_ADDRESS_SUMMIT || '0xf76dadbbc112738275ed398d15c0e8c47b2550f2' }}
+          # Devnet W3SPayRegistry on Paseo AH 1000 (from w3spay-admin). Override
+          # via the repo var after a registry redeploy; otherwise this known-good
+          # default is baked (src/config.ts carries the same devnet default).
+          VITE_W3SPAY_REGISTRY_ADDRESS: ${{ vars.VITE_W3SPAY_REGISTRY_ADDRESS_DEVNET || '0x950c0243cb112abe1112924f1fcab04fb03ae670' }}
           VITE_W3SPAY_PILOT_MERCHANT_ID: ${{ vars.VITE_W3SPAY_PILOT_MERCHANT_ID || 'funkhaus' }}
           NODE_OPTIONS: '--max-old-space-size=8192'
