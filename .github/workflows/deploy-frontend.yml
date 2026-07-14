@@ -62,8 +62,8 @@ jobs:
           # to 5Fk8 via the registerReserved owner-override before this runs,
           # otherwise the DotNS bind fails.
           MNEMONIC: ${{ secrets.DOTNS_MNEMONIC }}
-          BULLETIN_ENV: paseo-next
-          VITE_NETWORK: paseo-next
+          BULLETIN_ENV: devnet
+          VITE_NETWORK: devnet
           # List the checkout SPA in the browse app-directory: deploy.sh passes
           # --publish, which calls on-chain Publisher.publish() on Summit. The
           # deploy signer (5Fk8) owns the Publisher, so this is gateless. Requires
