@@ -11,7 +11,7 @@
  * `chain_getBlockHash` with params `[0]` over JSON-RPC.
  */
 
-export type NetworkKey = "paseo" | "paseo-next-v2" | "paseo-next" | "previewnet" | "summit";
+export type NetworkKey = "paseo" | "paseo-next-v2" | "paseo-next" | "previewnet" | "summit" | "devnet";
 
 export const SUPPORTED_NETWORKS: NetworkKey[] = [
   "paseo",
@@ -19,8 +19,9 @@ export const SUPPORTED_NETWORKS: NetworkKey[] = [
   "paseo-next",
   "previewnet",
   "summit",
+  "devnet",
 ];
-export const DEFAULT_NETWORK: NetworkKey = "summit";
+export const DEFAULT_NETWORK: NetworkKey = "devnet";
 
 export interface ChainEndpoint {
   /** WebSocket RPC URL for direct (standalone) connection. */
@@ -183,6 +184,35 @@ export const NETWORKS: Record<NetworkKey, NetworkConfig> = {
     },
     ipfsGateway: "https://summit-ipfs.polkadot.io",
     nativeToken: { symbol: "SUM", decimals: 10 },
+  },
+  // PCF devnet — public Paseo AH 1000 / People 1004 / Bulletin 1010. Endpoints
+  // mirror polkadot-app-deploy's built-in `devnet` env; genesis hashes come
+  // from the product-sdk devnet descriptors (chain_getBlockHash(0)). EVM
+  // chainId 420420417, native token PAS/10-dec.
+  devnet: {
+    key: "devnet",
+    displayName: "Devnet (public Paseo)",
+    isTestnet: true,
+    mainChain: {
+      wsUrl: "wss://asset-hub-paseo-rpc.n.dwellir.com",
+      genesisHash:
+        "0xd6eec26135305a8ad257a20d003357284c8aa03d0bdb2b357ab0a22371e11ef2",
+    },
+    bulletinChain: {
+      wsUrl: "wss://bulletin-paseo.tservices.es:8443",
+      genesisHash:
+        "0xe101f0fa4627d29a257645e02be86d80378fea1a2bf8fa6a918d150ebc760a59",
+    },
+    peopleChain: {
+      wsUrl: "wss://people-paseo.rotko.net",
+      genesisHash:
+        "0xe6c30d6e148f250b887105237bcaa5cb9f16dd203bf7b5b9d4f1da7387cb86ec",
+    },
+    // Devnet Bulletin HTTP IPFS gateway is still pending (see the DEVNET
+    // register). Left empty so the host transport / bitswap path resolves CIDs;
+    // supply VITE_BULLETIN_IPFS_GATEWAY once a public gateway lands.
+    ipfsGateway: "",
+    nativeToken: { symbol: "PAS", decimals: 10 },
   },
 };
 

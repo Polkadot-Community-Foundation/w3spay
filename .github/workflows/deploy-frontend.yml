@@ -69,9 +69,9 @@ jobs:
           # deploy signer (5Fk8) owns the Publisher, so this is gateless. Requires
           # the CLI at >=0.11.1 (pinned above), which wires Summit's Publisher.
           BULLETIN_DEPLOY_PUBLISH: 'true'
-          # Summit W3SPayRegistry (from w3spay-admin). Override via the repo var
-          # after a registry redeploy; otherwise this known-good default is baked
-          # (src/config.ts carries the same summit default).
-          VITE_W3SPAY_REGISTRY_ADDRESS: ${{ vars.VITE_W3SPAY_REGISTRY_ADDRESS_SUMMIT || '0xf76dadbbc112738275ed398d15c0e8c47b2550f2' }}
+          # Devnet W3SPayRegistry (from w3spay-admin, live on Paseo AH 1000).
+          # Override via the repo var after a registry redeploy; otherwise this
+          # known-good default is baked (src/config.ts carries the same devnet default).
+          VITE_W3SPAY_REGISTRY_ADDRESS: ${{ vars.VITE_W3SPAY_REGISTRY_ADDRESS_SUMMIT || '0x950c0243cb112abe1112924f1fcab04fb03ae670' }}
           VITE_W3SPAY_PILOT_MERCHANT_ID: ${{ vars.VITE_W3SPAY_PILOT_MERCHANT_ID || 'funkhaus' }}
           NODE_OPTIONS: '--max-old-space-size=8192'
