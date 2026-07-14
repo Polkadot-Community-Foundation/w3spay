@@ -46,7 +46,7 @@ jobs:
       - name: Install deploy tool
         run: npm install -g @polkadot-community-foundation/polkadot-app-deploy@0.12.1
 
-      - name: Deploy customer app to Summit
+      - name: Deploy customer app to devnet
         uses: nick-fields/retry@v3
         with:
           timeout_minutes: 15
