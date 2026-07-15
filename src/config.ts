@@ -12,7 +12,7 @@ import { envFlag, envString, requireEnvString } from "@/shared/lib/config";
 import { type EnvConfig, parseSupportedPlatforms } from "@/shared/lib/config.ts";
 
 
-const DEFAULT_W3SPAY_NETWORK: NetworkKey = "devnet";
+const DEFAULT_W3SPAY_NETWORK: NetworkKey = "paseo-next";
 
 // Deployed `W3SPayRegistry` per network (published by w3spay-admin). The active
 // default follows the resolved network so an env-unset build never inherits
@@ -23,7 +23,7 @@ const DEFAULT_W3SPAY_NETWORK: NetworkKey = "devnet";
 const DEFAULT_REGISTRY_BY_NETWORK: Partial<Record<NetworkKey, string>> = {
   summit: "0xf76dadbbc112738275ed398d15c0e8c47b2550f2",
   "paseo-next": "0x13a885e6c402cc293ae7185dcacbd824d109aee6", // PCF W3SPayRegistry on AH-next 1500 (owner 5Fk8)
-  devnet: "0x950c0243cb112abe1112924f1fcab04fb03ae670", // PCF W3SPayRegistry on Paseo AH 1000 (devnet)
+  devnet: "0x950c0243cb112abe1112924f1fcab04fb03ae670", // PCF W3SPayRegistry on Paseo AH 1000 (devnet; owner 0x8C78)
 };
 
 export function readEnv(): EnvConfig {
