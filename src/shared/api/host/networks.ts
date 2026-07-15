@@ -89,10 +89,9 @@ export const NETWORKS: Record<NetworkKey, NetworkConfig> = {
       genesisHash:
         "0xe6c30d6e148f250b887105237bcaa5cb9f16dd203bf7b5b9d4f1da7387cb86ec",
     },
-    // Devnet Bulletin HTTP IPFS gateway is still pending (see the DEVNET
-    // register). Fall back to a public gateway until one lands; override per
-    // deploy via VITE_BULLETIN_IPFS_GATEWAY.
-    ipfsGateway: "https://dweb.link",
+    // Devnet Bulletin HTTP IPFS gateway (bare origin; gatewayUrlForCid appends
+    // /ipfs/<cid>). Override per deploy via VITE_BULLETIN_IPFS_GATEWAY.
+    ipfsGateway: "https://devnet-ipfs.api.polkadotcommunity.foundation",
     nativeToken: { symbol: "PAS", decimals: 10 },
   },
   paseo: {
