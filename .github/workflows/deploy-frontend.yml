@@ -6,7 +6,7 @@ name: Deploy Frontend
 # cost a DotNS registration (~2 SUM) + a 14-day Bulletin upload. PR validation is
 # unit tests (see e2e.yml).
 #
-# Deploy CLI: @polkadot-community-foundation/polkadot-app-deploy@0.12.0 — it ships
+# Deploy CLI: @polkadot-community-foundation/polkadot-app-deploy@0.12.1 — it ships
 # the built-in `summit` env AND wires Summit's Publisher, so --publish lists the
 # app in the browse directory (no-op before v0.11.1). deploy.sh passes --publish
 # (BULLETIN_DEPLOY_PUBLISH=true), --mnemonic (direct signer), --config, --js-merkle
@@ -44,7 +44,7 @@ jobs:
           npm install --no-audit --no-fund
 
       - name: Install deploy tool
-        run: npm install -g @polkadot-community-foundation/polkadot-app-deploy@0.12.0
+        run: npm install -g @polkadot-community-foundation/polkadot-app-deploy@0.12.1
 
       - name: Deploy customer app to devnet
         uses: nick-fields/retry@v3
@@ -52,9 +52,9 @@ jobs:
           timeout_minutes: 15
           max_attempts: 3
           retry_wait_seconds: 30
-          command: ./deploy.sh "w3spaycheckout.dot"
+          command: ./deploy.sh "w3spay.dot"
         env:
-          # The Bulletin-authorized devnet uploader (5Fk8) that owns w3spaycheckout.dot
+          # The Bulletin-authorized Summit uploader (5Fk8) that owns w3spay.dot
           # — signs both the Bulletin upload and the DotNS bind. The domain is
           # baked into the build as the product identity (the deeplink), so it
           # MUST be w3spay.dot (was w3spaycheckout.dot, which broke the deeplink).
@@ -69,9 +69,9 @@ jobs:
           # deploy signer (5Fk8) owns the Publisher, so this is gateless. Requires
           # the CLI at >=0.11.1 (pinned above), which wires Summit's Publisher.
           BULLETIN_DEPLOY_PUBLISH: 'true'
-          # Devnet W3SPayRegistry on Paseo AH 1000 (from w3spay-admin). Override
-          # via the repo var after a registry redeploy; otherwise this known-good
-          # default is baked (src/config.ts carries the same devnet default).
-          VITE_W3SPAY_REGISTRY_ADDRESS: ${{ vars.VITE_W3SPAY_REGISTRY_ADDRESS_DEVNET || '0x950c0243cb112abe1112924f1fcab04fb03ae670' }}
+          # Devnet W3SPayRegistry (from w3spay-admin, live on Paseo AH 1000).
+          # Override via the repo var after a registry redeploy; otherwise this
+          # known-good default is baked (src/config.ts carries the same devnet default).
+          VITE_W3SPAY_REGISTRY_ADDRESS: ${{ vars.VITE_W3SPAY_REGISTRY_ADDRESS_SUMMIT || '0x950c0243cb112abe1112924f1fcab04fb03ae670' }}
           VITE_W3SPAY_PILOT_MERCHANT_ID: ${{ vars.VITE_W3SPAY_PILOT_MERCHANT_ID || 'funkhaus' }}
           NODE_OPTIONS: '--max-old-space-size=8192'
